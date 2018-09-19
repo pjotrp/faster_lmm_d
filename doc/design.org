@@ -14,7 +14,7 @@ Speed improvements are aimed for through:
 
 1. Lazy computation
 2. Streaming and parallel execution of code
-3. Use of CUDA architecture
+3. Use of CUDA and OpenCL architecture
 4. Use of KNL architecture
 
 In addition we aim for
@@ -32,9 +32,11 @@ language very suitable for this type of exercise.
 
 ** Install faster_lmm_d
 
-In principle faster_lmm_d can be independently installed as a binary
-executable. This executable can be run from GEMMA, Python, R etc.  See
-the [[../INSTALL.org][INSTALL doc]] for more information on building and installation.
+In principle faster_lmm_d can be independently be built and installed
+as a binary executable or as a library. Both can, in principle, be run
+from GEMMA, Python, R etc.  See the [[../INSTALL.org][INSTALL doc]] for more information
+on building and installation. For GEMMA integration see the GEMMA
+design document (gemma/doc/developers/design.org).
 
 ** Computing K
 
@@ -43,6 +45,7 @@ the [[../INSTALL.org][INSTALL doc]] for more information on building and install
 ** LOCO
 
 ** Architecture
+
 
 *** TODO Lazy computation
 

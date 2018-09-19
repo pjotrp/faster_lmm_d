@@ -1,0 +1,51 @@
+# Makefile for GEMMA build. This makefile is called from the GEMMA
+# source tree and builds a library
+
+D_COMPILER=ldc2
+DFLAGS = -wi -g -relocation-model=pic
+
+ifndef GUIX
+  ifdef GUIX_ENVIRONMENT
+    GUIX=$(GUIX_ENVIRONMENT)
+  endif
+endif
+ifdef GUIX
+  LIBRARY_PATH=$(GUIX)/lib
+endif
+
+DLIBS       = $(LIBRARY_PATH)/libphobos2-ldc.a $(LIBRARY_PATH)/libdruntime-ldc.a
+DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime-ldc-debug.a
+
+SRC         = source/gemma/api.d
+OBJ         = $(SRC:.d=.o)
+OUT         = faster-lmm-d.a
+
+debug:          DFLAGS += -O0 -d-debug -link-debuglib
+release static: DFLAGS += -O3 -release -enable-inlining -boundscheck=off
+static:         DFLAGS += -static -L-Bstatic
+
+all: debug
+
+default: all
+
+default debug release static: $(OUT)
+
+# ---- Compile step
+%.o: %.d
+	$(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@)
+
+singleobj:
+	$(info compile single object...)
+	$(D_COMPILER) -singleobj $(DFLAGS) -c -of=$(OUT) $(SRC)
+
+# ---- Link step
+$(OUT): $(OBJ)
+	$(info linking...)
+	$(D_COMPILER) -lib $(DFLAGS) $(OBJ)
+	ar rvs libfaster-lmm-d.a $(OBJ)
+
+	# $(D_COMPILER) -lib $(DFLAGS) -of=$(OUT) $(OBJ) $(LINK_OBJ) $(LIBS)
+
+clean:
+	rm -vf $(OBJ)
+	rm -vf *.a
