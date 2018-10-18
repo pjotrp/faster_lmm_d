@@ -135,6 +135,7 @@ run-gperf: gperf
 clean:
 	rm -rf build/*
 	rm -f $(OBJ) $(OUT) trace.{def,log}
+	rm -f *.a
 
 cleanIR:
 	rm -f $(IR) trace.{def,log}
