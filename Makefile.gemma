@@ -1,5 +1,6 @@
 # Makefile for GEMMA build. This makefile is called from the GEMMA
-# source tree and builds a library
+# source tree and builds a library. Release/debug mode is handled
+# from the calling makefile
 
 D_COMPILER=ldc2
 DFLAGS = -wi -g -relocation-model=pic
@@ -18,7 +19,7 @@ DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime
 
 SRC         = source/gemma/api.d
 OBJ         = $(SRC:.d=.o)
-OUT         = faster-lmm-d.a
+LIB         = libfaster-lmm-d.a # build a library
 
 debug:          DFLAGS += -O0 -d-debug -link-debuglib
 release static: DFLAGS += -O3 -release -enable-inlining -boundscheck=off
@@ -28,24 +29,17 @@ all: debug
 
 default: all
 
-default debug release static: $(OUT)
+default debug release static: $(LIB)
 
-# ---- Compile step
 %.o: %.d
 	$(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@)
 
-singleobj:
-	$(info compile single object...)
-	$(D_COMPILER) -singleobj $(DFLAGS) -c -of=$(OUT) $(SRC)
-
-# ---- Link step
-$(OUT): $(OBJ)
+$(LIB): $(OBJ)
 	$(info linking...)
 	$(D_COMPILER) -lib $(DFLAGS) $(OBJ)
-	ar rvs libfaster-lmm-d.a $(OBJ)
-
-	# $(D_COMPILER) -lib $(DFLAGS) -of=$(OUT) $(OBJ) $(LINK_OBJ) $(LIBS)
+	ar rvs $(LIB) $(OBJ)
 
 clean:
 	rm -vf $(OBJ)
+	rm -v $(LIB)
 	rm -vf *.a
