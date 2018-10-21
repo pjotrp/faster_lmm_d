@@ -3,7 +3,9 @@
 # from the calling makefile
 
 D_COMPILER=ldc2
-DFLAGS = -wi -g -relocation-model=pic
+BIOD_INCLUDE=./BioD  # path to BioD source tree
+
+DFLAGS = -I$(BIOD_INCLUDE) -wi -g -relocation-model=pic
 
 ifndef GUIX
   ifdef GUIX_ENVIRONMENT
@@ -17,7 +19,7 @@ endif
 DLIBS       = $(LIBRARY_PATH)/libphobos2-ldc.a $(LIBRARY_PATH)/libdruntime-ldc.a
 DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime-ldc-debug.a
 
-SRC         = source/gemma/api.d
+SRC         = source/gemma/api.d $(BIOD_INCLUDE)/bio/std/decompress.d
 OBJ         = $(SRC:.d=.o)
 LIB         = libfaster-lmm-d.a # build a library
 

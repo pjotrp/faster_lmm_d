@@ -20,7 +20,6 @@
 #   CUDA version:     CUDA=1
 
 D_COMPILER=ldc2
-
 LDMD=ldmd2
 
 BACKEND_FLAG =
