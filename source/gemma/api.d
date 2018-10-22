@@ -9,8 +9,13 @@ import std.stdio;
 
 extern (C) {
 
+  import std.array;
   import std.string : toStringz;
   import core.stdc.string : strncpy;
+  import bio.std.range.splitter;
+
+  import gemma.dmatrix;
+  import gemma.kinship;
 
   const VERSION = "0.10"c;
 
@@ -22,16 +27,33 @@ extern (C) {
   }
 
   void flmmd_compute_bimbam_K() {
-    uint lines = 0;
-    uint chars = 0;
-    foreach(ubyte[] s; GzipbyLine!(ubyte[])("example/BXD_geno.txt.gz")) {
+    ulong lines = 0;
+    ulong chars = 0;
+    ulong token_num = 0;
+    double[][] rows;
+    foreach(ubyte[] s; GzipbyLine!(ubyte[])("example/mouse_hs1940.geno.txt.gz")) {
       // test file contains 7320 lines 4707218 characters
-      write(cast(string)s);
+      // write(cast(string)s);
       chars += s.length;
       lines += 1;
+      // writeln(s);
+      auto tokens = array(SimpleSplitConv!(ubyte[])(s));
+
+      if (token_num == 0) token_num = tokens.length;
+      if (token_num != tokens.length) throw new Exception("Number on tokens does not match in line " ~ to!string(lines));
+
+      auto elements = new double[token_num-3];
+      foreach(i, token; tokens[3..$]) {
+        elements[i] = to!double(cast(string)token);
+      }
+      rows ~= elements;
     }
-    assert(chars == 4707218,"chars " ~ to!string(chars));
-    assert(lines == 7321,"lines " ~ to!string(lines));
+    DMatrix G = new DMatrix(rows);
+    auto K = kinship_full(G);
+
+    assert(chars == 71434128,"chars " ~ to!string(chars));
+    assert(lines == 12226,"lines " ~ to!string(lines));
+    assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
   }
 
 
