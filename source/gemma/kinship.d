@@ -13,6 +13,9 @@ import std.exception;
 import std.experimental.logger;
 import std.file;
 
+import std.experimental.logger;
+
+import gemma.blas;
 import gemma.dmatrix;
 
 DMatrix kinship_full(const DMatrix G)
@@ -24,9 +27,12 @@ DMatrix kinship_full(const DMatrix G)
   log(m," SNPs");
 
   DMatrix GT = slow_matrix_transpose(G);
-  DMatrix GGT = matrix_mult(GT, G);
-  assert(GGT.rows == n);
-  assert(GGT.cols == n);
+  assert(GT.rows == G.cols);
+  assert(GT.cols == G.rows);
+  DMatrix K = matrix_mult(GT, G);
+  info("DONE rows is ",K.rows," cols ",K.cols);
+  assert(K.rows == n);
+  assert(K.cols == n);
 
   /*
   info("normalize K");

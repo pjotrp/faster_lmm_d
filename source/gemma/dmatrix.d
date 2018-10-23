@@ -55,11 +55,9 @@ DMatrix slow_matrix_transpose(const DMatrix m) {
   info("slow_matrix_transpose");
   assert(m.cols > 0 && m.rows > 0);
   if (m.cols == 1 || m.rows == 1) {
-    //trace("Fast ",m.cols," x ",m.rows);
     return cast(DMatrix)m;
   }
   else {
-    //trace("Slow ", m.cols," x ",m.rows);
     double[] output = new double[m.size];
     auto index = 0;
     auto e = m.elements;
@@ -70,6 +68,6 @@ DMatrix slow_matrix_transpose(const DMatrix m) {
         output[index++] = e[j*cols + i];
       }
     }
-    return new DMatrix(rows, cols, output);
+    return new DMatrix(cols, rows, output);
   }
 }
