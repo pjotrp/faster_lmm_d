@@ -9,6 +9,7 @@ import std.stdio;
 
 extern (C) {
 
+  import std.algorithm;
   import std.array;
   import std.string : toStringz;
   import core.stdc.string : strncpy;
@@ -54,6 +55,10 @@ extern (C) {
     assert(chars == 71434128,"chars " ~ to!string(chars));
     assert(lines == 12226,"lines " ~ to!string(lines));
     assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
+
+    writeln(G.row(0));
+    writeln(reduce!("a + b")(G.row(0)));
+    assert(to!int(reduce!("a + b")(G.row(0))) == 1721 );
   }
 
 
