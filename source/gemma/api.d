@@ -9,6 +9,10 @@ import std.stdio;
 import std.string;
 
 extern (C) {
+  const VERSION = "0.10"c;
+}
+
+extern (C++) {
 
   import std.algorithm;
   import std.array;
@@ -21,7 +25,6 @@ extern (C) {
   import gemma.dmatrix;
   import gemma.kinship;
 
-  const VERSION = "0.10"c;
 
   // Buf should be preallocated and have at least a size of 16
   char *flmmd_api_version(char *buf) @nogc {
@@ -30,11 +33,13 @@ extern (C) {
     return buf;
   }
 
-  void flmmd_compute_bimbam_K(char *geno_fn) {
+  void flmmd_compute_bimbam_K(const char *geno_fn, int isnps_size, int *isnps) {
     ulong lines = 0;
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
+    info(isnps_size);
+    info(isnps[0],isnps[1]);
     info("GZipbyLine");
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     foreach(ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
@@ -56,11 +61,11 @@ extern (C) {
       // writeln("");
     }
     DMatrix G = new DMatrix(rows);
-    // auto K = kinship_full(G);
 
-    info("flmmd parsed " ~ fn ~ " " ~ to!string(lines) ~ " lines");
-    // assert(chars == 71434128,"chars " ~ to!string(chars));
-    // assert(lines == 12226,"lines " ~ to!string(lines));
+    info("flmmd parsed ",fn," ",lines," genotypes");
+    info("flmmd computes K on ",rows[0].length," individuals");
+    auto K = kinship_full(G);
+
     // assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
 
     // writeln(G.row(0));
