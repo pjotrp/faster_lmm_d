@@ -6,12 +6,15 @@ import bio.std.decompress;
 import std.conv;
 import std.exception;
 import std.stdio;
+import std.string;
 
 extern (C) {
 
   import std.algorithm;
   import std.array;
   import std.string : toStringz;
+
+  import std.experimental.logger;
   import core.stdc.string : strncpy;
   import bio.std.range.splitter;
 
@@ -27,14 +30,16 @@ extern (C) {
     return buf;
   }
 
-  void flmmd_compute_bimbam_K() {
+  void flmmd_compute_bimbam_K(char *geno_fn) {
     ulong lines = 0;
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
-    foreach(ubyte[] s; GzipbyLine!(ubyte[])("example/mouse_hs1940.geno.txt.gz")) {
-      // test file contains 7320 lines 4707218 characters
+    info("GZipbyLine");
+    auto fn = to!string(fromStringz(cast(char *)geno_fn));
+    foreach(ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
       // write(cast(string)s);
+
       chars += s.length;
       lines += 1;
       // writeln(s);
@@ -48,17 +53,19 @@ extern (C) {
         elements[i] = to!double(cast(string)token);
       }
       rows ~= elements;
+      // writeln("");
     }
     DMatrix G = new DMatrix(rows);
-    auto K = kinship_full(G);
+    // auto K = kinship_full(G);
 
-    assert(chars == 71434128,"chars " ~ to!string(chars));
-    assert(lines == 12226,"lines " ~ to!string(lines));
-    assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
+    info("flmmd parsed " ~ fn ~ " " ~ to!string(lines) ~ " lines");
+    // assert(chars == 71434128,"chars " ~ to!string(chars));
+    // assert(lines == 12226,"lines " ~ to!string(lines));
+    // assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
 
-    writeln(G.row(0));
-    writeln(reduce!("a + b")(G.row(0)));
-    assert(to!int(reduce!("a + b")(G.row(0))) == 1721 );
+    // writeln(G.row(0));
+    // writeln(reduce!("a + b")(G.row(0)));
+    // assert(to!int(reduce!("a + b")(G.row(0))) == 1721 );
   }
 
 
