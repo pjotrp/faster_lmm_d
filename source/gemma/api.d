@@ -33,13 +33,12 @@ extern (C++) {
     return buf;
   }
 
-  void flmmd_compute_bimbam_K(const char *geno_fn, int isnps_size, int *isnps) {
+  void flmmd_compute_bimbam_K(const char *geno_fn, int use_snp_size, int *use_snp) {
     ulong lines = 0;
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
-    info(isnps_size);
-    info(isnps[0],isnps[1]);
+    info("use snps size ",use_snp_size);
     info("GZipbyLine");
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     foreach(ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
@@ -48,16 +47,19 @@ extern (C++) {
       chars += s.length;
       lines += 1;
       // writeln(s);
-      auto tokens = array(SimpleSplitConv!(ubyte[])(s));
+      enforce(use_snp_size >= lines);
+      if (use_snp[lines]) {
+        auto tokens = array(SimpleSplitConv!(ubyte[])(s));
 
-      if (token_num == 0) token_num = tokens.length;
-      if (token_num != tokens.length) throw new Exception("Number on tokens does not match in line " ~ to!string(lines));
+        if (token_num == 0) token_num = tokens.length;
+        if (token_num != tokens.length) throw new Exception("Number on tokens does not match in line " ~ to!string(lines));
 
-      auto elements = new double[token_num-3];
-      foreach(i, token; tokens[3..$]) {
-        elements[i] = to!double(cast(string)token);
+        auto elements = new double[token_num-3];
+        foreach(i, token; tokens[3..$]) {
+          elements[i] = to!double(cast(string)token);
+        }
+        rows ~= elements;
       }
-      rows ~= elements;
       // writeln("");
     }
     DMatrix G = new DMatrix(rows);
