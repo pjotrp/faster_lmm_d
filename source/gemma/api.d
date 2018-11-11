@@ -8,11 +8,9 @@ import std.exception;
 import std.stdio;
 import std.string;
 
-extern (C) {
-  const VERSION = "0.10"c;
-}
-
 extern (C++) {
+
+  const __gshared VERSION = "0.10"c;
 
   import std.algorithm;
   import std.array;
@@ -24,6 +22,7 @@ extern (C++) {
 
   import gemma.dmatrix;
   import gemma.kinship;
+  import gemma.gsl : gsl_matrix;
 
 
   // Buf should be preallocated and have at least a size of 16
@@ -33,47 +32,43 @@ extern (C++) {
     return buf;
   }
 
-  void flmmd_compute_bimbam_K(const char *geno_fn, int use_snp_size, int *use_snp) {
-    ulong lines = 0;
+  void flmmd_compute_bimbam_K(const char *geno_fn, int use_snp_size, int *use_snp, gsl_matrix *k_result) {
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
+    rows.length = use_snp_size;
+    immutable n_ind = k_result.size1;
+    enforce(n_ind == k_result.size2 && n_ind>0,"K matrix result size is not square");
     info("use snps size ",use_snp_size);
+    // ---- Parse the geno file
     info("GZipbyLine");
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
+    auto use_snp_num = 0;
+    auto line = 0;
     foreach(ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
-      // write(cast(string)s);
-
+      line += 1;
       chars += s.length;
-      lines += 1;
-      // writeln(s);
-      enforce(use_snp_size >= lines);
-      if (use_snp[lines]) {
+      enforce(use_snp_size >= use_snp_num); // bounds check
+      if (use_snp[use_snp_num]) {
         auto tokens = array(SimpleSplitConv!(ubyte[])(s));
 
         if (token_num == 0) token_num = tokens.length;
-        if (token_num != tokens.length) throw new Exception("Number on tokens does not match in line " ~ to!string(lines));
-
+        if (token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
         auto elements = new double[token_num-3];
         foreach(i, token; tokens[3..$]) {
           elements[i] = to!double(cast(string)token);
         }
-        rows ~= elements;
+        rows[use_snp_num] = elements;
+        use_snp_num++;
       }
-      // writeln("");
     }
-    DMatrix G = new DMatrix(rows);
-
-    info("flmmd parsed ",fn," ",lines," genotypes");
+    enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
+    info("flmmd parsed ",fn," ",line," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
+
+    // ---- Compute K
+    DMatrix G = new DMatrix(rows);
     auto K = kinship_full(G);
-
-    // assert(array(SimpleSplitConv!(ubyte[])(cast(ubyte[])"hello, 1 2 \n\t3  4 \n")) == ["hello","1","2","3","4"]);
-
-    // writeln(G.row(0));
-    // writeln(reduce!("a + b")(G.row(0)));
-    // assert(to!int(reduce!("a + b")(G.row(0))) == 1721 );
   }
 
-
-} // extern C
+} // C++
