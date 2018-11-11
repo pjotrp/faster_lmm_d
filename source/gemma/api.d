@@ -44,9 +44,7 @@ extern (C++) {
     info("GZipbyLine");
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     auto use_snp_num = 0;
-    auto line = 0;
-    foreach(ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
-      line += 1;
+    foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
       chars += s.length;
       enforce(use_snp_size >= use_snp_num); // bounds check
       if (use_snp[use_snp_num]) {
@@ -63,7 +61,7 @@ extern (C++) {
       }
     }
     enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
-    info("flmmd parsed ",fn," ",line," genotypes");
+    info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
 
     // ---- Compute K

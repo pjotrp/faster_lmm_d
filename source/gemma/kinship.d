@@ -46,7 +46,6 @@ DMatrix kinship_full(const DMatrix G)
   log(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
   //if(test_kinship){ check_kinship(p_values); }
   check_memory();
-  return K;
   */
-  return null;
+  return K;
 }
