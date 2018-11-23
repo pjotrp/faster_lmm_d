@@ -4,6 +4,7 @@ module gemma.api;
 
 import bio.std.decompress;
 import std.conv;
+import std.file;
 import std.exception;
 import std.stdio;
 import std.string;
@@ -38,7 +39,7 @@ extern (C++) {
     double[][] rows;
     rows.length = use_snp_size;
     immutable n_ind = k_result.size1;
-    enforce(n_ind == k_result.size2 && n_ind>0,"K matrix result size is not square");
+    enforce(n_ind == k_result.size2 && n_ind>0,"K matrix result size is invalid");
     info("use snps size ",use_snp_size);
     // ---- Parse the geno file
     info("GZipbyLine");
@@ -67,6 +68,39 @@ extern (C++) {
     // ---- Compute K
     DMatrix G = new DMatrix(rows);
     auto K = kinship_full(G);
+  }
+
+  void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const bool is_centered) {
+    ulong chars = 0;
+    ulong token_num = 0;
+    double[][] rows;
+    // immutable n_ind = k_result.size1;
+    // ---- Parse the geno file
+    info("GZipbyLine");
+    auto fn = to!string(fromStringz(cast(char *)geno_fn));
+    auto use_snp_num = 0;
+    foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
+      chars += s.length;
+      // enforce(use_snp_size >= use_snp_num); // bounds check
+      auto tokens = array(SimpleSplitConv!(ubyte[])(s));
+
+      if (token_num == 0) token_num = tokens.length;
+      if (token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
+      auto elements = new double[token_num-3];
+      foreach(i, token; tokens[3..$]) {
+        elements[i] = to!double(cast(string)token);
+      }
+      rows ~= elements;
+      use_snp_num++;
+    }
+    // enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
+    info("flmmd parsed ",fn," ",use_snp_num," genotypes");
+    info("flmmd computes K on ",rows[0].length," individuals");
+
+    // ---- Compute K
+    DMatrix G = new DMatrix(rows);
+    auto K = kinship_full(G);
+    writeln(K.elements[0..10]);
   }
 
 } // C++
