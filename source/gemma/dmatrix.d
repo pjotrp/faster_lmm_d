@@ -8,6 +8,7 @@
 module gemma.dmatrix;
 
 import std.algorithm;
+import std.array;
 import std.conv;
 import std.math;
 import std.stdio;
@@ -52,6 +53,31 @@ class DMatrix{
 
 }
 
+struct DMatrixRowIter {
+  m_items row = 0;
+  immutable DMatrix m;
+
+  this(immutable DMatrix matrix) {
+    m = matrix;
+  }
+
+  bool empty() const {
+    // The range is consumed when begin equals end
+    return row == m.rows;
+  }
+
+  void popFront() {
+    // Skipping the first element is achieved by
+    // incrementing the beginning of the range
+    ++row;
+  }
+
+  const(double[]) front() const {
+    // The front element is the one at the beginning
+    return m.row(row);
+  }
+
+}
 
 DMatrix slow_matrix_transpose(const DMatrix m) {
   info("slow_matrix_transpose");
@@ -71,5 +97,14 @@ DMatrix slow_matrix_transpose(const DMatrix m) {
       }
     }
     return new DMatrix(cols, rows, output);
+  }
+}
+
+void write_to_file(string fn, immutable DMatrix m) {
+  info("Writing "~fn);
+  auto rows = DMatrixRowIter(m);
+  auto f = File(fn, "w");
+  foreach(ref row; rows) {
+    f.writeln(join(row.map!(to!string),"\t"));
   }
 }

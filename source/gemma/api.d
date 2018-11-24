@@ -100,7 +100,13 @@ extern (C++) {
     // ---- Compute K
     DMatrix G = new DMatrix(rows);
     auto K = kinship_full(G);
-    writeln(K.elements[0..10]);
+
+    // ---- Write K
+
+    auto outfn = to!string(fromStringz(cast(char *)target));
+    outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
+    write_to_file(outfn,cast(immutable DMatrix)K);
+
   }
 
 } // C++
