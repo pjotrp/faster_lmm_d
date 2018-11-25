@@ -19,6 +19,8 @@ extern (C++) {
 
   import std.experimental.logger;
   import core.stdc.string : strncpy;
+
+  import bio.std.genotype.maf;
   import bio.std.range.splitter;
 
   import gemma.dmatrix;
@@ -33,52 +35,25 @@ extern (C++) {
     return buf;
   }
 
-  void flmmd_compute_bimbam_K(const char *geno_fn, int use_snp_size, int *use_snp, gsl_matrix *k_result) {
-    ulong chars = 0;
-    ulong token_num = 0;
-    double[][] rows;
-    rows.length = use_snp_size;
-    immutable n_ind = k_result.size1;
-    enforce(n_ind == k_result.size2 && n_ind>0,"K matrix result size is invalid");
-    info("use snps size ",use_snp_size);
-    // ---- Parse the geno file
-    info("GZipbyLine");
-    auto fn = to!string(fromStringz(cast(char *)geno_fn));
-    auto use_snp_num = 0;
-    foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
-      chars += s.length;
-      enforce(use_snp_size >= use_snp_num); // bounds check
-      if (use_snp[use_snp_num]) {
-        auto tokens = array(SimpleSplitConv!(ubyte[])(s));
+  /*
 
-        if (token_num == 0) token_num = tokens.length;
-        if (token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
-        auto elements = new double[token_num-3];
-        foreach(i, token; tokens[3..$]) {
-          elements[i] = to!double(cast(string)token);
-        }
-        rows[use_snp_num] = elements;
-        use_snp_num++;
-      }
-    }
-    enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
-    info("flmmd parsed ",fn," ",use_snp_num," genotypes");
-    info("flmmd computes K on ",rows[0].length," individuals");
+    A typical GeneNetwork BIMBAM snp genotype line looks like
 
-    // ---- Compute K
-    DMatrix G = new DMatrix(rows);
-    auto K = kinship_full(G);
-  }
+  rs31443144, X, Y, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, ...
 
-  void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const bool is_centered) {
+  */
+
+  void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const bool is_centered, const double maf_level) {
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
     // immutable n_ind = k_result.size1;
     // ---- Parse the geno file
     info("GZipbyLine");
+    info("Maf",maf_level);
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     auto use_snp_num = 0;
+    bool[double] genotypes_used;
     foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
       chars += s.length;
       // enforce(use_snp_size >= use_snp_num); // bounds check
@@ -88,11 +63,49 @@ extern (C++) {
       if (token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
       auto elements = new double[token_num-3];
       foreach(i, token; tokens[3..$]) {
-        elements[i] = to!double(cast(string)token);
+        auto t = cast(string)token;
+        if (t == "NA") throw new Exception(t); // FIXME - do something
+        auto value = to!double(t);
+        elements[i] = value;
       }
-      rows ~= elements;
+      // filter on MAF
+      auto freqs = maf(elements);
+      foreach(k, v; freqs) {
+        genotypes_used[k] = true;
+      }
+
+      if (maf_level != -1) {
+        // Following GEMMA logic
+        // FIXME: need to correct for max size
+        auto maf = elements.reduce!"a+b"/elements.length;
+        if (maf < maf_level || maf > 1.0-maf_level) {
+          info(maf,"Dropping ",freqs);
+          continue;
+        }
+        /* but I think this is what it should be
+           if (freqs.values.reduce!max > 1.0-default_maf) {
+           info("Dropping ",freqs);
+           continue;
+           }
+        */
+      }
+      // filter on poly
+      // FIXME? The code in gemma just checks for multiple types
+
+      // CalcHWE
+
+      // r2_level
+
+      // Scale matrix
+      auto geno_mean = reduce!"a + b"(0.0, elements)/elements.length;
+      // writeln(geno_mean);
+      auto elements2 = elements.map!(a => a - geno_mean);
+      rows ~= array(elements2);
       use_snp_num++;
     }
+    info("Genotypes used: ",genotypes_used.keys.sort);
+    enforce(is_centered); // FIXME
+
     // enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
@@ -101,6 +114,10 @@ extern (C++) {
     DMatrix G = new DMatrix(rows);
     auto K = kinship_full(G);
 
+    // ---- Scale K
+    foreach (ref e ; K.elements) {
+      e *= (1.0/use_snp_num);
+    }
     // ---- Write K
 
     auto outfn = to!string(fromStringz(cast(char *)target));

@@ -19,11 +19,12 @@ endif
 DLIBS       = $(LIBRARY_PATH)/libphobos2-ldc.a $(LIBRARY_PATH)/libdruntime-ldc.a
 DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime-ldc-debug.a
 
-SRC         = $(wildcard source/gemma/*.d) $(BIOD_INCLUDE)/bio/std/decompress.d $(BIOD_INCLUDE)/bio/std/range/splitter.d
+SRC         = $(wildcard source/gemma/*.d) $(BIOD_INCLUDE)/bio/std/decompress.d $(BIOD_INCLUDE)/bio/std/range/splitter.d \
+              $(BIOD_INCLUDE)/bio/std/genotype/maf.d
 OBJ         = $(SRC:.d=.o)
 LIB         = libfaster-lmm-d.a # build a library
 
-debug:          DFLAGS += -O0 -d-debug -link-debuglib
+debug:          DFLAGS += -unittest -O0 -d-debug -link-debuglib
 release static: DFLAGS += -O3 -release -enable-inlining -boundscheck=off
 static:         DFLAGS += -static -L-Bstatic
 
