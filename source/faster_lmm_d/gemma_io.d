@@ -1150,7 +1150,8 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
 }
 
 
-// Read bimbam annotation file which consists of rows of SNP, POS and CHR
+// Read bimbam annotation file which consists of rows of SNP, POS, CHR with cM. Values can be 
+// NA or empty
 bool ReadFile_anno(const string file_anno, ref string[string] mapRS2chr,
                    ref size_t[string] mapRS2bp, ref double[string] mapRS2cM) {
   writeln("ReadFile_anno");

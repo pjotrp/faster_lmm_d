@@ -21,6 +21,7 @@ extern (C++) {
   import core.stdc.string : strncpy;
 
   import bio.std.genotype.maf;
+  import bio.std.genotype.snp;
   import bio.std.range.splitter;
 
   import gemma.dmatrix;
@@ -43,14 +44,20 @@ extern (C++) {
 
   */
 
-  void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const bool is_centered, const double maf_level) {
+  void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const char *anno_fn, const bool is_loco, const bool is_centered, const double maf_level) {
     ulong chars = 0;
     ulong token_num = 0;
     double[][] rows;
     // immutable n_ind = k_result.size1;
+    // ---- Fetch annotation
+    SNP[] snp_annotations;
+    if (is_loco)
+      snp_annotations = fetch_snp_annotations(to!string(fromStringz(cast(char *)anno_fn)));
+
+
     // ---- Parse the geno file
     info("GZipbyLine");
-    info("Maf",maf_level);
+    info("MAF",maf_level);
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     auto use_snp_num = 0;
     bool[double] genotypes_used;
@@ -92,9 +99,9 @@ extern (C++) {
       // filter on poly
       // FIXME? The code in gemma just checks for multiple types
 
-      // CalcHWE
+      // FIXME: CalcHWE
 
-      // r2_level
+      // FIXME: r2_level
 
       // Scale matrix
       auto geno_mean = reduce!"a + b"(0.0, elements)/elements.length;
@@ -109,21 +116,35 @@ extern (C++) {
     // enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
+    if (is_loco) {
+      auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
+      info("flmmd LOCO on ",chromosomes);
+      foreach(chr ; chromosomes) {
+        // ---- Compute K
+        DMatrix G = new DMatrix(rows);
+        auto K = kinship_full(G);
 
-    // ---- Compute K
-    DMatrix G = new DMatrix(rows);
-    auto K = kinship_full(G);
-
-    // ---- Scale K
-    foreach (ref e ; K.elements) {
-      e *= (1.0/use_snp_num);
+        // ---- Scale K
+        foreach (ref e ; K.elements) {
+          e *= (1.0/use_snp_num);
+        }
+      }
     }
-    // ---- Write K
+    else {
+      // ---- Compute K
+      DMatrix G = new DMatrix(rows);
+      auto K = kinship_full(G);
 
-    auto outfn = to!string(fromStringz(cast(char *)target));
-    outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
-    write_to_file(outfn,cast(immutable DMatrix)K);
+      // ---- Scale K
+      foreach (ref e ; K.elements) {
+        e *= (1.0/use_snp_num);
+      }
+      // ---- Write K
 
+      auto outfn = to!string(fromStringz(cast(char *)target));
+      outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
+      write_to_file(outfn,cast(immutable DMatrix)K);
+    }
   }
 
 } // C++
