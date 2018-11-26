@@ -57,8 +57,16 @@ extern (C++) {
     // immutable n_ind = k_result.size1;
     // ---- Fetch annotation
     SNP[] snp_annotations;
+
+    try {
+
     if (is_loco)
       snp_annotations = fetch_snp_annotations(to!string(fromStringz(cast(char *)anno_fn)));
+
+    }
+    catch (Exception e) {
+      writeln(e.msg);
+    }
 
     // ---- Parse the geno file
     info("GZipbyLine");
@@ -118,6 +126,7 @@ extern (C++) {
     }
     info("Genotypes used: ",genotypes_used.keys.sort);
     enforce(is_centered); // FIXME
+    enforce(use_snp_num > token_num,"Not enough snps to compute K "~to!string(use_snp_num));
 
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
