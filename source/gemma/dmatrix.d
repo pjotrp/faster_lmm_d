@@ -35,6 +35,7 @@ class DMatrix{
     elements = cast(double[]) e.dup;
   }
 
+  // Copies the contents of rows into elements (FIXME: slow)
   this(const double[][] rows) {
     this(rows.length,rows[0].length);
     foreach (r, row; rows) {
@@ -47,6 +48,7 @@ class DMatrix{
   this(const DMatrix m) {
     this(m.nrows,m.ncols,m.elements);
   }
+
   pragma(inline) pure const size() { return elements.length; };
 
   auto row(m_items i) const { return elements[i*ncols..(i+1)*ncols]; };

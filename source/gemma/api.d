@@ -8,6 +8,9 @@ import std.file;
 import std.exception;
 import std.stdio;
 import std.string;
+import std.typecons;
+
+alias SnpGenotypes = Tuple!(SNP, "snp", double[], "genotypes");
 
 extern (C++) {
 
@@ -47,13 +50,12 @@ extern (C++) {
   void flmmd_compute_and_write_K(const char *target, const char *geno_fn, const char *anno_fn, const bool is_loco, const bool is_centered, const double maf_level) {
     ulong chars = 0;
     ulong token_num = 0;
-    double[][] rows;
+    SnpGenotypes[] rows;
     // immutable n_ind = k_result.size1;
     // ---- Fetch annotation
     SNP[] snp_annotations;
     if (is_loco)
       snp_annotations = fetch_snp_annotations(to!string(fromStringz(cast(char *)anno_fn)));
-
 
     // ---- Parse the geno file
     info("GZipbyLine");
@@ -82,19 +84,13 @@ extern (C++) {
       }
 
       if (maf_level != -1) {
-        // Following GEMMA logic
+        // Following GEMMA logic (incorporates heterozygous information)
         // FIXME: need to correct for max size
         auto maf = elements.reduce!"a+b"/elements.length;
         if (maf < maf_level || maf > 1.0-maf_level) {
           info(maf,"Dropping ",freqs);
           continue;
         }
-        /* but I think this is what it should be
-           if (freqs.values.reduce!max > 1.0-default_maf) {
-           info("Dropping ",freqs);
-           continue;
-           }
-        */
       }
       // filter on poly
       // FIXME? The code in gemma just checks for multiple types
@@ -107,13 +103,14 @@ extern (C++) {
       auto geno_mean = reduce!"a + b"(0.0, elements)/elements.length;
       // writeln(geno_mean);
       auto elements2 = elements.map!(a => a - geno_mean);
-      rows ~= array(elements2);
+      auto entry = (use_snp_num > snp_annotations.length ? SnpGenotypes(NullSNP, array(elements2)) :
+                    SnpGenotypes(snp_annotations[use_snp_num], array(elements2)));
+      rows ~= entry;
       use_snp_num++;
     }
     info("Genotypes used: ",genotypes_used.keys.sort);
     enforce(is_centered); // FIXME
 
-    // enforce(n_ind == rows[0].length, "Individuals (" ~ to!string(rows[0].length) ~ ") do not match with size of K " ~ to!string(n_ind));
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
     if (is_loco) {
@@ -121,18 +118,23 @@ extern (C++) {
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; chromosomes) {
         // ---- Compute K
-        DMatrix G = new DMatrix(rows);
+        DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
+        info("---> G",G.rows,"x", G.cols);
         auto K = kinship_full(G);
 
         // ---- Scale K
         foreach (ref e ; K.elements) {
           e *= (1.0/use_snp_num);
         }
+        // ---- Write K
+        auto outfn = to!string(fromStringz(cast(char *)target));
+        outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
+        write_to_file(outfn,cast(immutable DMatrix)K);
       }
     }
     else {
       // ---- Compute K
-      DMatrix G = new DMatrix(rows);
+      DMatrix G = new DMatrix(array(rows.map!(r => r.genotypes)));
       auto K = kinship_full(G);
 
       // ---- Scale K
@@ -140,7 +142,6 @@ extern (C++) {
         e *= (1.0/use_snp_num);
       }
       // ---- Write K
-
       auto outfn = to!string(fromStringz(cast(char *)target));
       outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
       write_to_file(outfn,cast(immutable DMatrix)K);
