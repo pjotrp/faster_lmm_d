@@ -3,9 +3,12 @@
 module gemma.api;
 
 import bio.std.decompress;
+
+// import std.concurrency;
 import std.conv;
 import std.file;
 import std.exception;
+import std.parallelism;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -93,7 +96,7 @@ extern (C++) {
         if (max_value != 0.0) maf /= max_value; // normalize frequencies to between 0-1
         enforce(maf>=0.0 && maf<=1.0);
         if (maf < maf_level || maf > 1.0-maf_level) {
-          info(maf,"Dropping ",freqs);
+          trace("#snp ",line," maf:",maf," dropping ",freqs," max:",max_value);
           continue;
         }
       }
@@ -108,7 +111,7 @@ extern (C++) {
       auto geno_mean = reduce!"a + b"(0.0, elements)/elements.length;
       // writeln(geno_mean);
       auto elements2 = elements.map!(a => a - geno_mean);
-      auto entry = (use_snp_num > snp_annotations.length ? SnpGenotypes(NullSNP, array(elements2)) :
+      auto entry = (use_snp_num >= snp_annotations.length ? SnpGenotypes(NullSNP, array(elements2)) :
                     SnpGenotypes(snp_annotations[use_snp_num], array(elements2)));
       rows ~= entry;
       use_snp_num++;
@@ -123,19 +126,10 @@ extern (C++) {
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; chromosomes) {
-        // ---- Compute K
-        DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
-        info("---> G",G.rows,"x", G.cols);
-        auto K = kinship_full(G);
-
-        // ---- Scale K
-        foreach (ref e ; K.elements) {
-          e *= (1.0/use_snp_num);
-        }
-        // ---- Write K
         auto outfn = to!string(fromStringz(cast(char *)target));
         outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
-        write_to_file(outfn,cast(immutable DMatrix)K);
+        auto task = task!compute_kinship(outfn,rows,chr,is_centered);
+        taskPool.put(task);
       }
     }
     else {
@@ -145,7 +139,7 @@ extern (C++) {
 
       // ---- Scale K
       foreach (ref e ; K.elements) {
-        e *= (1.0/use_snp_num);
+        e *= (1.0/G.rows);
       }
       // ---- Write K
       auto outfn = to!string(fromStringz(cast(char *)target));
@@ -155,3 +149,16 @@ extern (C++) {
   }
 
 } // C++
+
+void compute_kinship(string outfn, SnpGenotypes[] rows, string chr, bool is_centered) {
+  DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
+  info("---> G",chr,":",G.rows,"x", G.cols);
+  auto K = kinship_full(G);
+
+  // ---- Scale K
+  foreach (ref e ; K.elements) {
+    e *= (1.0/G.rows);
+  }
+  // ---- Write K
+  write_to_file(outfn,cast(immutable DMatrix)K);
+}
