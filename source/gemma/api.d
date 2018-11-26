@@ -63,6 +63,7 @@ extern (C++) {
     auto fn = to!string(fromStringz(cast(char *)geno_fn));
     auto use_snp_num = 0;
     bool[double] genotypes_used;
+    double max_value = 0.0;
     foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
       chars += s.length;
       // enforce(use_snp_size >= use_snp_num); // bounds check
@@ -77,16 +78,20 @@ extern (C++) {
         auto value = to!double(t);
         elements[i] = value;
       }
+
       // filter on MAF
       auto freqs = maf(elements);
       foreach(k, v; freqs) {
         genotypes_used[k] = true;
+        if (k > max_value) max_value = k;
       }
 
       if (maf_level != -1) {
         // Following GEMMA logic (incorporates heterozygous information)
-        // FIXME: need to correct for max size
+        // note the normalization only works when all a max value has been reached
         auto maf = elements.reduce!"a+b"/elements.length;
+        if (max_value != 0.0) maf /= max_value; // normalize frequencies to between 0-1
+        enforce(maf>=0.0 && maf<=1.0);
         if (maf < maf_level || maf > 1.0-maf_level) {
           info(maf,"Dropping ",freqs);
           continue;
@@ -99,7 +104,7 @@ extern (C++) {
 
       // FIXME: r2_level
 
-      // Scale matrix
+      // Scale genotypes
       auto geno_mean = reduce!"a + b"(0.0, elements)/elements.length;
       // writeln(geno_mean);
       auto elements2 = elements.map!(a => a - geno_mean);
@@ -113,6 +118,7 @@ extern (C++) {
 
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
+
     if (is_loco) {
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
