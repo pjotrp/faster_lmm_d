@@ -131,6 +131,7 @@ extern (C++) {
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
 
+    auto taskpool = new TaskPool(4);
     if (is_loco) {
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
@@ -138,7 +139,7 @@ extern (C++) {
         auto outfn = to!string(fromStringz(cast(char *)target));
         outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
         auto task = task!compute_kinship(outfn,rows,chr,is_centered);
-        taskPool.put(task);
+        taskpool.put(task);
       }
     }
     else {
