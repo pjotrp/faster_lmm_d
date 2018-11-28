@@ -25,6 +25,7 @@ extern (C++) {
 
   import std.experimental.logger;
   import core.stdc.string : strncpy;
+  import core.stdc.stdlib : atof;
 
   import bio.std.genotype.maf;
   import bio.std.genotype.snp;
@@ -54,6 +55,7 @@ extern (C++) {
     ulong chars = 0;
     ulong token_num = 0;
     SnpGenotypes[] rows;
+    bool validate = false; // FIXME
     // immutable n_ind = k_result.size1;
     // ---- Fetch annotation
     SNP[] snp_annotations;
@@ -75,21 +77,29 @@ extern (C++) {
     auto use_snp_num = 0;
     bool[double] genotypes_used;
     double max_value = 0.0;
+    ubyte[][20_000] token_buf;
     foreach(line, ubyte[] s; GzipbyLine!(ubyte[])(fn)) {
       chars += s.length;
+      // if (line % 10) continue; // FIXME
       // enforce(use_snp_size >= use_snp_num); // bounds check
-      auto tokens = array(SimpleSplitConv!(ubyte[])(s));
+      /*
+         real    0m53.701s
+         user    0m53.820s
+         sys     0m0.572s
+      */
+      auto tokens = fast_splitter(token_buf,s);
 
       if (token_num == 0) token_num = tokens.length;
-      if (token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
+      if (validate && token_num != tokens.length) throw new Exception("Number of tokens does not match in line " ~ to!string(line));
       auto elements = new double[token_num-3];
       foreach(i, token; tokens[3..$]) {
-        auto t = cast(string)token;
-        if (t == "NA") throw new Exception(t); // FIXME - do something
-        auto value = to!double(t);
+        if (validate) {
+          auto t = cast(string)token;
+          if (t == "NA") throw new Exception(t); // FIXME - do something
+        }
+        auto value = atof(cast(char *)token);
         elements[i] = value;
       }
-
       // filter on MAF
       auto freqs = maf(elements);
       foreach(k, v; freqs) {
@@ -108,6 +118,7 @@ extern (C++) {
           continue;
         }
       }
+
       // filter on poly
       // FIXME? The code in gemma just checks for multiple types
 
@@ -124,6 +135,7 @@ extern (C++) {
       rows ~= entry;
       use_snp_num++;
     }
+
     info("Genotypes used: ",genotypes_used.keys.sort);
     enforce(is_centered); // FIXME
     enforce(use_snp_num > token_num,"Not enough snps to compute K "~to!string(use_snp_num));
@@ -131,8 +143,8 @@ extern (C++) {
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
 
-    auto taskpool = new TaskPool(4);
     if (is_loco) {
+      auto taskpool = new TaskPool(4);
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; chromosomes) {
@@ -141,6 +153,7 @@ extern (C++) {
         auto task = task!compute_kinship(outfn,rows,chr,is_centered);
         taskpool.put(task);
       }
+      taskpool.finish();
     }
     else {
       // ---- Compute K
@@ -155,6 +168,7 @@ extern (C++) {
       auto outfn = to!string(fromStringz(cast(char *)target));
       outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
       write_to_file(outfn,cast(immutable DMatrix)K);
+
     }
   }
 
