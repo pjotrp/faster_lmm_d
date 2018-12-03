@@ -14,6 +14,7 @@ import std.conv;
 import std.exception;
 import std.experimental.logger;
 import std.file;
+import std.stdio;
 
 import std.experimental.logger;
 
@@ -44,11 +45,29 @@ DMatrix compute_K(const DMatrix G)
   return K;
 }
 
-
-
 import gemma.api : SnpGenotypes;
 
 DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
-  DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
+  auto select = new bool[rows.length];
+  if (chr == "all") {
+    select[] = true;
+  }
+  else
+    foreach (i, row ; rows) {
+      select[i] = (row.snp.chr != chr);
+    }
+  auto count = array(select.filter!(b => b == true)).length;
+  info("Counted ",count," genotypes for ",chr);
+  DMatrix G = new DMatrix(count,rows[0].genotypes.length);
+  auto r = 0;
+  foreach(i, selected ; select) {
+    if (selected) {
+      auto row = rows[i];
+      foreach(c, geno; row.genotypes) {
+        G.elements[r * G.ncols + c] = geno;
+      }
+      r++;
+    }
+  }
   return compute_K(G);
 }
