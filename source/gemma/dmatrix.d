@@ -49,6 +49,10 @@ class DMatrix{
     this(m.nrows,m.ncols,m.elements);
   }
 
+  ~this() {
+    elements = null;
+  }
+
   pragma(inline) pure const size() { return elements.length; };
 
   auto row(m_items i) const { return elements[i*ncols..(i+1)*ncols]; };

@@ -69,5 +69,7 @@ DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
       r++;
     }
   }
-  return compute_K(G);
+  auto K = compute_K(G);
+  G.elements = null; // tell GC to free up
+  return K;
 }
