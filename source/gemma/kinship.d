@@ -5,8 +5,10 @@
    Copyright © 2017 - 2018 Prasun Anand & Pjotr Prins
 */
 
-module faster_lmm_d.kinship;
+module gemma.kinship;
 
+import std.array : array;
+import std.algorithm;
 import std.csv;
 import std.conv;
 import std.exception;
@@ -18,7 +20,7 @@ import std.experimental.logger;
 import gemma.blas;
 import gemma.dmatrix;
 
-DMatrix kinship_full(const DMatrix G)
+DMatrix compute_K(const DMatrix G)
 {
   info("Full kinship matrix used");
   m_items m = G.nrows; // snps
@@ -34,18 +36,19 @@ DMatrix kinship_full(const DMatrix G)
   assert(K.rows == n);
   assert(K.cols == n);
 
-  /*
-  info("normalize K");
-  DMatrix K = divide_dmatrix_num(mmT, m);
+  // ---- Scale K
+  foreach (ref e ; K.elements) {
+    e *= (1.0/G.rows);
+  }
 
-  log("kinship_full K sized ",n," ",K.elements.length);
-  log(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
-  ulong row = n;
-  ulong lr = n*n-1;
-  ulong ll = (n-1)*n;
-  log(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
-  //if(test_kinship){ check_kinship(p_values); }
-  check_memory();
-  */
   return K;
+}
+
+
+
+import gemma.api : SnpGenotypes;
+
+DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
+  DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
+  return compute_K(G);
 }

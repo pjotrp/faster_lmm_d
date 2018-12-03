@@ -33,6 +33,7 @@ extern (C++) {
 
   import gemma.dmatrix;
   import gemma.kinship;
+
   import gemma.gsl : gsl_matrix;
 
 
@@ -162,14 +163,8 @@ extern (C++) {
 
 void compute_kinship(string target, SnpGenotypes[] rows, string chr, bool is_centered) {
   // FIXME: too much copying going on, also inside kinship_full
-  DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
-  info("---> G",chr,":",G.rows,"x", G.cols);
-  auto K = kinship_full(G);
+  auto K = compute_K(rows,chr);
 
-  // ---- Scale K
-  foreach (ref e ; K.elements) {
-    e *= (1.0/G.rows);
-  }
   // ---- Write K
   auto outfn = target;
   outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
