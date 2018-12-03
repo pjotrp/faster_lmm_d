@@ -19,7 +19,7 @@ endif
 DLIBS       = $(LIBRARY_PATH)/libphobos2-ldc.a $(LIBRARY_PATH)/libdruntime-ldc.a
 DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime-ldc-debug.a
 
-SRC         = $(wildcard source/gemma/*.d) $(BIOD_INCLUDE)/bio/std/decompress.d $(BIOD_INCLUDE)/bio/std/range/splitter.d \
+SRC         = $(wildcard source/gemma/*.d) $(BIOD_INCLUDE)/bio/core/decompress.d $(BIOD_INCLUDE)/bio/std/range/splitter.d \
               $(BIOD_INCLUDE)/bio/std/genotype/maf.d \
               $(BIOD_INCLUDE)/bio/std/genotype/snp.d
 OBJ         = $(SRC:.d=.o)

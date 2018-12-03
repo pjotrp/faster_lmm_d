@@ -2,7 +2,7 @@
 
 module gemma.api;
 
-import bio.std.decompress;
+import bio.core.decompress;
 
 // import std.concurrency;
 import std.conv;
@@ -61,12 +61,10 @@ extern (C++) {
     SNP[] snp_annotations;
 
     try {
-
-    if (is_loco)
-      snp_annotations = fetch_snp_annotations(to!string(fromStringz(cast(char *)anno_fn)));
-
+      if (is_loco)
+        snp_annotations = fetch_snp_annotations(to!string(fromStringz(cast(char *)anno_fn)));
     }
-    catch (Exception e) {
+    catch (Exception e) { // FIXME
       writeln(e.msg);
     }
 
@@ -143,38 +141,27 @@ extern (C++) {
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
 
+    auto target_s = to!string(fromStringz(cast(char *)target));
     if (is_loco) {
       auto taskpool = new TaskPool(4);
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; chromosomes) {
-        auto outfn = to!string(fromStringz(cast(char *)target));
-        outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
-        auto task = task!compute_kinship(outfn,rows,chr,is_centered);
+        auto task = task!compute_kinship(target_s,rows,chr,is_centered);
         taskpool.put(task);
       }
       taskpool.finish();
     }
     else {
-      // ---- Compute K
-      DMatrix G = new DMatrix(array(rows.map!(r => r.genotypes)));
-      auto K = kinship_full(G);
-
-      // ---- Scale K
-      foreach (ref e ; K.elements) {
-        e *= (1.0/G.rows);
-      }
-      // ---- Write K
-      auto outfn = to!string(fromStringz(cast(char *)target));
-      outfn ~= (is_centered ? ".cXX.txt" : ".sXX.txt");
-      write_to_file(outfn,cast(immutable DMatrix)K);
-
+      // ---- Compute full K
+      compute_kinship(target_s,rows,"all",is_centered);
     }
   }
 
 } // C++
 
-void compute_kinship(string outfn, SnpGenotypes[] rows, string chr, bool is_centered) {
+void compute_kinship(string target, SnpGenotypes[] rows, string chr, bool is_centered) {
+  // FIXME: too much copying going on, also inside kinship_full
   DMatrix G = new DMatrix(array(rows.filter!(r => r.snp.chr != chr ).map!(r => r.genotypes)));
   info("---> G",chr,":",G.rows,"x", G.cols);
   auto K = kinship_full(G);
@@ -184,5 +171,7 @@ void compute_kinship(string outfn, SnpGenotypes[] rows, string chr, bool is_cent
     e *= (1.0/G.rows);
   }
   // ---- Write K
+  auto outfn = target;
+  outfn ~= "." ~ chr ~ (is_centered ? ".cXX.txt" : ".sXX.txt");
   write_to_file(outfn,cast(immutable DMatrix)K);
 }
