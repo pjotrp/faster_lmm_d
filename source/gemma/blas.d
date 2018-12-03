@@ -57,8 +57,8 @@ DMatrix matrix_mult_transpose(const DMatrix G) {
   auto rha = G;
   DMatrix lha = slow_matrix_transpose(G);
   auto GT = lha;
-  double[] C = new double[GT.rows*G.cols];
-  cblas_dgemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(GT.rows), to!int(G.cols), to!int(GT.cols), /*no scaling*/
-              1,GT.elements.ptr, to!int(GT.ncols), G.elements.ptr, to!int(G.ncols), /*no addition*/0, C.ptr, to!int(G.ncols));
-  return new DMatrix(GT.rows, G.cols, C);
+  double[] C = new double[G.cols*G.cols];
+  cblas_dgemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(G.cols), to!int(G.cols), to!int(G.rows), /*no scaling*/
+              1,GT.elements.ptr, to!int(G.rows), G.elements.ptr, to!int(G.ncols), /*no addition*/0, C.ptr, to!int(G.ncols));
+  return new DMatrix(G.cols, G.cols, C);
 }
