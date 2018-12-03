@@ -147,7 +147,7 @@ extern (C++) {
       auto taskpool = new TaskPool(8);
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
       info("flmmd LOCO on ",chromosomes);
-      foreach(chr ; chromosomes) {
+      foreach(chr ; array(chromosomes) ~ "all") {
         auto task = task!compute_kinship(target_s,rows,chr,is_centered);
         taskpool.put(task);
       }
