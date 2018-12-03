@@ -32,7 +32,7 @@ class DMatrix{
 
   this(const m_items num_rows, const m_items num_cols, const double[] e) {
     this(num_rows, num_cols);
-    elements = cast(double[]) e.dup;
+    elements = cast(double[]) e;
   }
 
   // Copies the contents of rows into elements (FIXME: slow)
