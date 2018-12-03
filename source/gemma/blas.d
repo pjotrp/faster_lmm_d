@@ -52,13 +52,38 @@ DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
   return new DMatrix(lha.rows, rha.cols, C);
 }
 
+
+/*
+void matrixtTransposeMult(std::vector<float>& inMatrix, int rowNum)
+{
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+
+    int colNum = (int)inMatrix.size() / rowNum;
+    thrust::device_vector<float> d_InMatrix(inMatrix);
+    thrust::device_vector<float> d_outputMatrix(rowNum*rowNum);
+    float alpha = 1.0f;
+    float beta = 0.0f;
+
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, rowNum, rowNum, colNum, &alpha,
+        thrust::raw_pointer_cast(d_InMatrix.data()), rowNum, thrust::raw_pointer_cast(d_InMatrix.data()), rowNum, &beta,
+        thrust::raw_pointer_cast(d_outputMatrix.data()), rowNum);
+
+    thrust::host_vector<float> result = d_outputMatrix;
+    for (auto elem : result)
+        std::cout << elem << ",";
+    std::cout << std::endl;
+
+    cublasDestroy(handle);
+}
+*/
+
 DMatrix matrix_mult_transpose(const DMatrix G) {
-  info("matrix_mult");
-  auto rha = G;
-  DMatrix lha = slow_matrix_transpose(G);
-  auto GT = lha;
-  double[] C = new double[G.cols*G.cols];
-  cblas_dgemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(G.cols), to!int(G.cols), to!int(G.rows), /*no scaling*/
-              1,GT.elements.ptr, to!int(G.rows), G.elements.ptr, to!int(G.ncols), /*no addition*/0, C.ptr, to!int(G.ncols));
-  return new DMatrix(G.cols, G.cols, C);
+  info("matrix_mult_transpose");
+  int rows = to!int(G.cols);
+  int cols = to!int(G.rows);
+  double[] C = new double[rows*rows]; // result matrix
+  cblas_dgemm(Order.RowMajor, Transpose.Trans, Transpose.NoTrans, rows, rows, cols, /*no scaling*/
+              1.0, G.elements.ptr, rows, G.elements.ptr, rows, /*no addition*/0.0, C.ptr, rows);
+  return new DMatrix(rows,rows,C);
 }
