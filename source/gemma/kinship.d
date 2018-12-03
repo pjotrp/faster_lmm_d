@@ -32,7 +32,8 @@ DMatrix compute_K(const DMatrix G)
   DMatrix GT = slow_matrix_transpose(G);
   assert(GT.rows == G.cols);
   assert(GT.cols == G.rows);
-  DMatrix K = matrix_mult(GT, G);
+  // DMatrix K = matrix_mult(GT, G);
+  DMatrix K = matrix_mult_transpose(G);
   info("DONE rows is ",K.rows," cols ",K.cols);
   assert(K.rows == n);
   assert(K.cols == n);

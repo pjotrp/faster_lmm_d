@@ -43,10 +43,21 @@ extern (C) {
 void cblas_dgemm(in CBLAS_ORDER order, in CBLAS_TRANSPOSE TransA, in CBLAS_TRANSPOSE TransB, in blasint M, in blasint N, in blasint K, in double alpha, in double *A, in blasint lda, in double *B, in blasint ldb, in double beta, double *C, in blasint ldc);
 }
 
-
 DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
   info("matrix_mult");
   double[] C = new double[lha.nrows*rha.ncols];
+  cblas_dgemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(lha.rows), to!int(rha.cols), to!int(lha.cols), /*no scaling*/
+              1,lha.elements.ptr, to!int(lha.ncols), rha.elements.ptr, to!int(rha.ncols), /*no addition*/0, C.ptr, to!int(rha.ncols));
+  // auto res_shape = [lha.rows(),rha.cols()];
+  return new DMatrix(lha.rows, rha.cols, C);
+}
+
+DMatrix matrix_mult_transpose(const DMatrix G) {
+  info("matrix_mult");
+  auto rha = G;
+  DMatrix lha = slow_matrix_transpose(G);
+  auto GT = lha;
+  double[] C = new double[GT.nrows*G.ncols];
   cblas_dgemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(lha.rows), to!int(rha.cols), to!int(lha.cols), /*no scaling*/
               1,lha.elements.ptr, to!int(lha.ncols), rha.elements.ptr, to!int(rha.ncols), /*no addition*/0, C.ptr, to!int(rha.ncols));
   // auto res_shape = [lha.rows(),rha.cols()];
