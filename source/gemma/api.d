@@ -163,6 +163,7 @@ extern (C++) {
 
 void compute_kinship(string target, SnpGenotypes[] rows, string chr, bool is_centered) {
   // FIXME: too much copying going on, also inside kinship_full
+  info("Compute kinship for ",chr);
   auto K = compute_K(rows,chr);
 
   // ---- Write K
