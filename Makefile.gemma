@@ -25,8 +25,6 @@ SRC         = $(wildcard source/gemma/*.d) $(BIOD_INCLUDE)/bio/core/decompress.d
 OBJ         = $(SRC:.d=.o)
 LIB         = libfaster-lmm-d.a # build a library
 
-source/gemma/api.o: source/gemma/kinship.o
-
 debug:          DFLAGS += -unittest -O0 -d-debug -link-debuglib
 release static: DFLAGS += -O3 -release -enable-inlining -boundscheck=off
 static:         DFLAGS += -static -L-Bstatic
@@ -36,6 +34,8 @@ all: debug
 default: all
 
 default debug release static: $(LIB)
+
+source/gemma/api.o: source/gemma/kinship.o
 
 %.o: %.d
 	$(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@)
