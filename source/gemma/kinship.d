@@ -44,17 +44,8 @@ DMatrix compute_K(const DMatrix G)
 
 import gemma.api : SnpGenotypes;
 
-DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
-  auto select = new bool[rows.length];
-  if (chr == "all") {
-    select[] = true;
-  }
-  else
-    foreach (i, row ; rows) {
-      select[i] = (row.snp.chr != chr);
-    }
+DMatrix compute_K(const SnpGenotypes[] rows, const bool[] select) {
   auto count = reduce!"a + b"(0,select);
-  info("Counted ",count," genotypes for ",chr);
   DMatrix G = new DMatrix(count,rows[0].genotypes.length);
   auto r = 0;
   foreach(i, selected ; select) {
@@ -69,4 +60,28 @@ DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
   auto K = compute_K(G);
   G.elements = null; // tell GC to free up
   return K;
+}
+
+bool[] remove_chromosome(CHROMOSOMES)(const SnpGenotypes[] rows, const CHROMOSOMES chromosomes, const string chr) {
+  auto select = new bool[rows.length];
+  if (chr == "all") {
+    select[] = true;
+  }
+  else
+    foreach (i, row ; rows) {
+      select[i] = (row.snp.chr != chr);
+    }
+  auto count = reduce!"a + b"(0,select);
+  info("Counted ",count," genotypes for ",chr);
+  return select;
+}
+
+bool[] down_sample(const SnpGenotypes[] rows, const bool[] select1) {
+  auto select = select1.dup;
+  auto count1 = reduce!"a + b"(0,select);
+  if (count1 > 30_000) {
+    auto count = reduce!"a + b"(0,select);
+    info("Using ",count," genotypes");
+  }
+  return select;
 }

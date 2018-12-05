@@ -146,25 +146,29 @@ extern (C++) {
     if (is_loco) {
       auto taskpool = new TaskPool(8);
       auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
+      writeln(chromosomes);
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; array(chromosomes) ~ "all") {
-        auto task = task!compute_kinship(target_s,rows,chr,is_centered);
+        auto task = task!compute_kinship(target_s,rows,chromosomes,chr,is_centered);
         taskpool.put(task);
       }
       taskpool.finish();
     }
     else {
       // ---- Compute full K
-      compute_kinship(target_s,rows,"all",is_centered);
+      compute_kinship(target_s,rows,null,"all",is_centered);
     }
   }
 
 } // C++
 
-void compute_kinship(string target, SnpGenotypes[] rows, string chr, bool is_centered) {
+void compute_kinship(CHROMOSOMES)(string target, SnpGenotypes[] rows, const CHROMOSOMES chromosomes, string chr, bool is_centered) {
   // FIXME: too much copying going on, also inside kinship_full
   info("Compute kinship for ",chr);
-  auto K = compute_K(rows,chr);
+  auto select1 = remove_chromosome(rows,chromosomes,chr);
+  auto select = down_sample(rows,select1);
+
+  auto K = compute_K(rows,select1);
 
   // ---- Write K
   auto outfn = target;
