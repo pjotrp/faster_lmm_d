@@ -53,7 +53,7 @@ DMatrix compute_K(const SnpGenotypes[] rows, const string chr) {
     foreach (i, row ; rows) {
       select[i] = (row.snp.chr != chr);
     }
-  auto count = reduce!"a + to!int(b)"(0,select);
+  auto count = reduce!"a + b"(0,select);
   info("Counted ",count," genotypes for ",chr);
   DMatrix G = new DMatrix(count,rows[0].genotypes.length);
   auto r = 0;
