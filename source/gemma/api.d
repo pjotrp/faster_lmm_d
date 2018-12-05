@@ -165,9 +165,9 @@ void compute_kinship(CHROMOSOMES)(string target, SnpGenotypes[] rows, const CHRO
   // FIXME: too much copying going on, also inside kinship_full
   info("Compute kinship for ",chr);
   auto select1 = remove_chromosome(rows,chr);
-  auto select = down_sample(rows,chromosomes,select1);
+  // auto select = down_sample(rows,chromosomes,select1);
 
-  auto K = compute_K(rows,select);
+  auto K = compute_K(rows,select1);
 
   // ---- Write K
   auto outfn = target;

@@ -82,7 +82,7 @@ bool[] down_sample(CHROMOSOMES)(const SnpGenotypes[] rows, const CHROMOSOMES chr
   if (count > MAX_SNPS) {
     // FIXME this is a really simple implementation - sampling at interval
     foreach(i, selected ; select1) {
-      select[i] = (selected && (i % count/MAX_SNPS));
+      select[i] = !(selected && (i % count/MAX_SNPS));
     }
     count = reduce!"a + b"(0,select);
   }
