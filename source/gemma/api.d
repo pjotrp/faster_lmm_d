@@ -142,11 +142,10 @@ extern (C++) {
     info("flmmd parsed ",fn," ",use_snp_num," genotypes");
     info("flmmd computes K on ",rows[0].length," individuals");
 
+    auto chromosomes  = array(array(snp_annotations.map!(snp => snp.chr)).sort.uniq);
     auto target_s = to!string(fromStringz(cast(char *)target));
     if (is_loco) {
       auto taskpool = new TaskPool(8);
-      auto chromosomes  = array(snp_annotations.map!(snp => snp.chr)).sort.uniq;
-      writeln(chromosomes);
       info("flmmd LOCO on ",chromosomes);
       foreach(chr ; array(chromosomes) ~ "all") {
         auto task = task!compute_kinship(target_s,rows,chromosomes,chr,is_centered);
@@ -156,7 +155,7 @@ extern (C++) {
     }
     else {
       // ---- Compute full K
-      compute_kinship(target_s,rows,null,"all",is_centered);
+      compute_kinship(target_s,rows,chromosomes,"all",is_centered);
     }
   }
 
@@ -165,10 +164,10 @@ extern (C++) {
 void compute_kinship(CHROMOSOMES)(string target, SnpGenotypes[] rows, const CHROMOSOMES chromosomes, string chr, bool is_centered) {
   // FIXME: too much copying going on, also inside kinship_full
   info("Compute kinship for ",chr);
-  auto select1 = remove_chromosome(rows,chromosomes,chr);
-  auto select = down_sample(rows,select1);
+  auto select1 = remove_chromosome(rows,chr);
+  auto select = down_sample(rows,chromosomes,select1);
 
-  auto K = compute_K(rows,select1);
+  auto K = compute_K(rows,select);
 
   // ---- Write K
   auto outfn = target;

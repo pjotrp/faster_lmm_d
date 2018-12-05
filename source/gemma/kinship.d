@@ -23,7 +23,6 @@ import gemma.dmatrix;
 
 DMatrix compute_K(const DMatrix G)
 {
-  info("Full kinship matrix used");
   m_items m = G.nrows; // snps
   m_items n = G.ncols; // inds
   log(n," INDs");
@@ -62,7 +61,7 @@ DMatrix compute_K(const SnpGenotypes[] rows, const bool[] select) {
   return K;
 }
 
-bool[] remove_chromosome(CHROMOSOMES)(const SnpGenotypes[] rows, const CHROMOSOMES chromosomes, const string chr) {
+bool[] remove_chromosome(const SnpGenotypes[] rows, const string chr) {
   auto select = new bool[rows.length];
   if (chr == "all") {
     select[] = true;
@@ -76,12 +75,17 @@ bool[] remove_chromosome(CHROMOSOMES)(const SnpGenotypes[] rows, const CHROMOSOM
   return select;
 }
 
-bool[] down_sample(const SnpGenotypes[] rows, const bool[] select1) {
+bool[] down_sample(CHROMOSOMES)(const SnpGenotypes[] rows, const CHROMOSOMES chromosomes, const bool[] select1) {
   auto select = select1.dup;
-  auto count1 = reduce!"a + b"(0,select);
-  if (count1 > 30_000) {
-    auto count = reduce!"a + b"(0,select);
-    info("Using ",count," genotypes");
+  auto count = reduce!"a + b"(0,select1);
+  auto MAX_SNPS = 1000 * chromosomes.length;
+  if (count > MAX_SNPS) {
+    // FIXME this is a really simple implementation - sampling at interval
+    foreach(i, selected ; select1) {
+      select[i] = (selected && (i % count/MAX_SNPS));
+    }
+    count = reduce!"a + b"(0,select);
   }
+  info("Using ",count," genotypes");
   return select;
 }
